@@ -29,21 +29,75 @@ void handle_list(FILE *sock)
     if (fgets(response, sizeof(response), sock))
     {
         // displays +OK
-        printf("%s", response);
+        printf("DEBUG: Initial response: %s", response);
     }
 
     // read file list until the end "."
     printf("Available files:\n");
     while (fgets(response, sizeof(response), sock))
     {
+        printf("DEBUG: Line from server: %s", response);
         if (strcmp(response, ".\n") == 0)
         {
+            printf("End of file list.\n");
             break;
         }
         printf("%s", response);
     }
 }
 
+// function for GET command
+void handle_get(FILE *sock, const char *filename)
+{
+    // Send GET command
+    fprintf(sock, "GET %s\n", filename);
+    fflush(sock);
+
+    // Read server response
+    char response[256];
+    if (fgets(response, sizeof(response), sock) == NULL || strncmp(response, "+OK", 3) != 0)
+    {
+        printf("Error: %s", response);
+        return;
+    }
+
+    // Open file for writing
+    FILE *file = fopen(filename, "wb");
+    if (!file)
+    {
+        perror("Could not open file for writing");
+        return;
+    }
+
+    // Read file data from the server and write to disk
+    char buffer[1024];
+    size_t bytes_received;
+    while ((bytes_received = fread(buffer, 1, sizeof(buffer), sock)) > 0)
+    {
+        fwrite(buffer, 1, bytes_received, file);
+    }
+
+    fclose(file);
+    printf("File '%s' downloaded successfully.\n", filename);
+}
+
+// function to handle QUIT command
+void handle_quit(FILE *sock)
+{
+    fprintf(sock, "QUIT\n");
+    fflush(sock);
+
+    char response[256];
+    if (fgets(response, sizeof(response), sock) && strncmp(response, "+OK", 3) == 0)
+    {
+        printf("Disconnected from server.\n");
+    }
+    else
+    {
+        printf("Error during from server.\n");
+    }
+}
+// function to handle GET
 int main()
 {
     char server[256];
@@ -76,7 +130,8 @@ int main()
     {
         printf("\nMenu:\n");
         printf("1. List Files\n");
-        printf("2. Quit\n");
+        printf("2. Download a File\n");
+        printf("3. Quit\n");
         printf("enter your choice: ");
         scanf("%s", choice);
 
@@ -86,7 +141,14 @@ int main()
         }
         else if (strcmp(choice, "2") == 0)
         {
-            printf("exiting...\n");
+            char filename[256];
+            printf("Enter filename to download: ");
+            scanf("%s", filename);;
+            handle_get(sock, filename);
+        }
+        else if (strcmp(choice, "3") == 0)
+        {
+            handle_quit(sock);
             break;
         }
         else
@@ -94,5 +156,8 @@ int main()
             printf("Invalid choice. Please try again.\n");
         }
     }
-}
 
+    fclose(sock);
+    close(fd);
+    return 0;
+}
