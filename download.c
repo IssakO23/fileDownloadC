@@ -17,6 +17,33 @@ void handle_helo(FILE *sock)
     printf("%s", response);
 }
 
+// function to handle PING command
+void handle_list(FILE *sock)
+{
+    fprintf(sock, "LIST\n");
+    fflush(sock);
+
+    char response[256];
+    
+    // read and print the first line (+OK or error)
+    if (fgets(response, sizeof(response), sock))
+    {
+        // displays +OK
+        printf("%s", response);
+    }
+
+    // read file list until the end "."
+    printf("Available files:\n");
+    while (fgets(response, sizeof(response), sock))
+    {
+        if (strcmp(response, ".\n") == 0)
+        {
+            break;
+        }
+        printf("%s", response);
+    }
+}
+
 int main()
 {
     char server[256];
@@ -44,7 +71,28 @@ int main()
     printf("Connected to %s\n", hostname);
     handle_helo(sock);
 
-    fclose(sock);
-    close(fd);
-    return 0;
+    char choice[10];
+    while(1)
+    {
+        printf("\nMenu:\n");
+        printf("1. List Files\n");
+        printf("2. Quit\n");
+        printf("enter your choice: ");
+        scanf("%s", choice);
+
+        if (strcmp(choice, "1") == 0)
+        {
+            handle_list(sock);
+        }
+        else if (strcmp(choice, "2") == 0)
+        {
+            printf("exiting...\n");
+            break;
+        }
+        else
+        {
+            printf("Invalid choice. Please try again.\n");
+        }
+    }
 }
+
